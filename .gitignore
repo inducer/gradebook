@@ -1,0 +1,4 @@
+.*.sw[op]
+*.sqlite
+.sw[op]
+*~
