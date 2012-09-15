@@ -3,6 +3,7 @@ from sqlalchemy import Float, Unicode, Integer, Date, DateTime, Boolean
 from sqlalchemy.orm import relationship
 
 from camelot.admin.entity_admin import EntityAdmin
+from camelot.types import RichText
 from camelot.core.orm import Entity
 from camelot.view.forms import Form, TabForm, WidgetOnlyForm
 
@@ -74,7 +75,11 @@ class GradeFromStudentAdmin(EntityAdmin):
     list_display = ["assignment", "points", "due", "completed", "remark"]
 
 class ProcessStateChangeFromStudentAdmin(EntityAdmin):
-    list_display = ["process", "remark", "when"]
+    list_display = ["process", "new_state", "remark", "when"]
+
+    field_attributes = dict(
+            new_state=dict(choices=process_state_choices))
+
 
 class Student(Entity):
     __tablename__ = 'student'
@@ -85,6 +90,8 @@ class Student(Entity):
             nullable=False)
     course = relationship("Course")
     identifier = Column(Unicode(60))
+    user_name = Column(Unicode(60))
+    notes = Column(RichText())
     contacts = relationship("StudentContactInfo")
     grades = relationship("AssignmentGrade")
     processes = relationship("ProcessStateChange")
@@ -92,7 +99,7 @@ class Student(Entity):
             nullable=False)
 
     class Admin(EntityAdmin):
-        list_display = ["last_name", "first_name", "identifier", "course"]
+        list_display = ["last_name", "first_name", "identifier", "user_name", "course"]
         field_attributes = dict(
                 contacts=dict(create_inline=True),
                 grades=dict(
@@ -110,8 +117,10 @@ class Student(Entity):
                 "is_active",
                 "first_name",
                 "last_name",
+                "user_name", 
                 "identifier", 
                 "course",
+                "notes",
                 "contacts"])),
             ('Grades', WidgetOnlyForm('grades')),
             ('Processes', WidgetOnlyForm('processes')),
@@ -247,6 +256,8 @@ class ProcessStateChange(Entity):
     when = Column(DateTime,
             default=datetime.datetime.now,
             nullable=False)
+
+    new_state = Column(Unicode(1024))
 
     remark = Column(Unicode(1024))
 

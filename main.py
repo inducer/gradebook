@@ -1,4 +1,3 @@
-
 import logging
 from camelot.core.conf import settings, SimpleSettings
 
@@ -12,11 +11,12 @@ class MySettings( SimpleSettings ):
     # to another database or change the location where files are stored
 
     def ENGINE( self ):
+        import os
         from sqlalchemy import create_engine
-        return create_engine( 'sqlite:///gradebook.sqlite' )
+        return create_engine('sqlite:///'+os.environ["GRADEBOOK_DATABASE"])
 
     def setup_model( self ):
-        """This function will be called at application startup, it is used to 
+        """This function will be called at application startup, it is used to
         setup the model"""
         from camelot.core.sql import metadata
         from sqlalchemy.orm import configure_mappers
@@ -28,8 +28,8 @@ class MySettings( SimpleSettings ):
         configure_mappers()
         metadata.create_all()
 
-my_settings = MySettings( 'My Company', 'Grade book' ) 
-settings.append( my_settings )
+my_settings = MySettings('My Company', 'Grade book')
+settings.append(my_settings)
 # end custom settings
 
 def start_application():
@@ -39,4 +39,3 @@ def start_application():
 
 if __name__ == '__main__':
     start_application()
-    
