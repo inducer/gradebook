@@ -4,9 +4,7 @@ from sqlalchemy.orm import relationship
 
 from camelot.admin.entity_admin import EntityAdmin
 from camelot.core.orm import Entity
-from camelot.view.controls import delegates
 from camelot.view.forms import Form, TabForm, WidgetOnlyForm
-import camelot.types
 
 import datetime
 
@@ -214,8 +212,8 @@ class AssignmentGrade(Entity):
 class Process(Entity):
     __tablename__ = 'process'
 
-    name = Column(Unicode(1024))
-    course_id = Column(Integer, ForeignKey('course.id'))
+    name = Column(Unicode(1024), nullable=False)
+    course_id = Column(Integer, ForeignKey('course.id'), nullable=False)
     course = relationship("Course")
     state_changes = relationship("ProcessStateChange")
 
@@ -223,6 +221,10 @@ class Process(Entity):
         verbose_name_plural = "Processes"
 
         list_display = ["name", "course"]
+
+        field_attributes = dict(
+                name=dict(minimal_column_width=60)
+                )
 
     def __unicode__(self):
         result = self.name or "<unnamed process>"
@@ -243,7 +245,8 @@ class ProcessStateChange(Entity):
     process = relationship("Process")
 
     when = Column(DateTime,
-            default=datetime.datetime.now)
+            default=datetime.datetime.now,
+            nullable=False)
 
     remark = Column(Unicode(1024))
 
