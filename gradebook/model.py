@@ -1,5 +1,5 @@
 from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy import Float, Unicode, Integer, DateTime, Boolean
+from sqlalchemy import Float, Unicode, Integer, Date, DateTime, Boolean
 from sqlalchemy.orm import relationship
 
 from camelot.admin.entity_admin import EntityAdmin
@@ -45,24 +45,32 @@ class School(Entity):
     class Admin(EntityAdmin):
         list_display = ["name"]
 
+        field_attributes = dict(
+                name=dict(minimal_column_width=60)
+                )
+
     def __unicode__(self):
         return self.name or "<unnamed school>"
 
 class Course(Entity):
     __tablename__ = 'course'
 
-    name = Column(Unicode(60))
-    school_id = Column(Integer, ForeignKey('school.id'))
+    name = Column(Unicode(60), nullable=False)
+    school_id = Column(Integer, ForeignKey('school.id'), nullable=False)
     school = relationship("School")
 
-    year = Column(Integer)
-    year_part = Column(Integer)
+    start_date = Column(Date, nullable=False)
 
     class Admin(EntityAdmin):
-        list_display = ["name", "year", "year_part", "school"]
+        list_display = ["name", "start_date", "school"]
+
+        field_attributes = dict(
+                name=dict(minimal_column_width=50),
+                )
 
     def __unicode__(self):
-        return u"%s %s/%s" % (self.name, self.year_part, self.year)
+        return u"%s %s/%s" % (self.name, self.start_date.month,
+                self.start_date.year)
 
 class GradeFromStudentAdmin(EntityAdmin):
     list_display = ["assignment", "points", "due", "completed", "remark"]
@@ -146,17 +154,21 @@ class Assignment(Entity):
     course_id = Column(Integer, ForeignKey('course.id'), nullable=False)
     course = relationship("Course")
     possible_points = Column(Float)
-    due = Column(DateTime)
+    due = Column(Date)
     grades = relationship("AssignmentGrade")
 
     class Admin(EntityAdmin):
         list_display = ["course", "kind", "number", "possible_points", "due"]
+        form_display = ["course", "kind", "number", "name", "possible_points", "due"]
         field_attributes = dict(
             kind=dict(choices=assignment_choices),
             grades=dict(
                 create_inline=True,
                 admin=GradeFromAssignmentAdmin,
                 ),
+            name=dict(
+                tooltip="Alternative description to kind/number",
+                )
             )
 
         form_display = TabForm([
