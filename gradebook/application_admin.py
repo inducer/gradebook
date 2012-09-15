@@ -14,10 +14,11 @@ class MyApplicationAdmin(ApplicationAdmin):
     def get_sections(self):
         from camelot.model.memento import Memento
         from camelot.model.i18n import Translation
-        return [ Section( _('My classes'),
+        return [ Section( _('Grade book'),
                           self,
                           Icon('tango/22x22/apps/system-users.png'),
-                          items = [m.School, m.Course, m.Student]),
+                          items = [m.School, m.Course, m.Assignment, 
+                              m.Process, m.Student]),
                  Section( _('Configuration'),
                           self,
                           Icon('tango/22x22/categories/preferences-system.png'),
