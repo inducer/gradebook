@@ -1,0 +1,13 @@
+A grade book application
+------------------------
+
+Makes keeping large lists of students a bit more bearable
+than spreadsheets. Just install
+
+http://www.python-camelot.com/
+
+then run
+
+python main.py.
+
+- Andreas Kloeckner <inform@tiker.net>
