@@ -47,6 +47,8 @@ def assignment_state_change_choices(entity_instance):
     (('submitted'),('Submitted')),
     (('graded'),('Graded')),
     (('rejected'),('Rejected')),
+    (('retrieved'),('Retrieved')),
+    (('unavailable'),('Unavailable')),
     (('extension'),('Extension')),
     ]
 
