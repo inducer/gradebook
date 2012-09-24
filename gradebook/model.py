@@ -92,7 +92,7 @@ class AssignmentFromStudentAdmin(EntityAdmin):
 
     field_attributes = dict(
             new_state=dict(choices=assignment_state_change_choices),
-            points=dict(calculator=False))
+            )
 
 class ProcessStateChangeFromStudentAdmin(EntityAdmin):
     list_display = ["process", "new_state", "remark", "timestamp"]
@@ -237,6 +237,19 @@ class AssignmentStateChange(Entity):
     timestamp = Column(DateTime, default=datetime.datetime.now)
     points = Column(Float)
     remark = Column(Unicode(1024))
+
+    report = Column(RichText())
+
+    class Admin(EntityAdmin):
+        verbose_name_plural = "Assignment state changes"
+
+        list_display = ["student", "assignment", "new_state", "timestamp", "points"]
+        form_display = list_display + [
+                "due_date", "remark", "report"]
+
+        field_attributes = dict(
+                new_state=dict(choices=assignment_state_change_choices),
+                )
 
 # }}}
 
