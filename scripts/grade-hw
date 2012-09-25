@@ -79,15 +79,15 @@ for student in session.query(Student):
                 with open(report_file, "wb") as outf:
                     outf.write(inf.read())
 
-	if options.start_terminal:
-	    call(["gnome-terminal", "--working-directory="+hw_dir])
-	
-	import os
-	if "EDITOR" in os.environ:
+        if options.start_terminal:
+            call(["gnome-terminal", "--working-directory="+hw_dir])
+
+        import os
+        if "EDITOR" in os.environ:
             editor = os.environ["EDITOR"].split()
         else:
             editor = ["vim"]
-		
+
         call(editor+[report_file])
 
         import codecs
