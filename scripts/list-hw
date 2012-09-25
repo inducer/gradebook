@@ -1,0 +1,8 @@
+#! /bin/sh
+
+if test "$1" = ""; then
+  echo "usage: $0 number"
+  exit 1
+fi
+
+ssh buster "cd ~git/repositories; pwd; for i in hpc12-hw$1-*; do echo \${i%%.git}; done"

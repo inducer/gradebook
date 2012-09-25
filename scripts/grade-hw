@@ -1,0 +1,119 @@
+#! /usr/bin/env python
+#
+# {{{ boilerplate
+
+from camelot.core.orm import Session
+import os, sys
+sys.path.append(os.environ["GRADEBOOK_ROOT"])
+import main
+
+from camelot.core.conf import settings
+settings.setup_model()
+
+# }}}
+
+course_id, kind, number, name = sys.argv[1:]
+
+session = Session()
+
+from gradebook.model import (Student, Assignment,
+        AssignmentStateChange as ASC)
+
+assmt = (session.query(Assignment)
+        .filter(Assignment.course_id == course_id)
+        .filter(Assignment.kind == kind)
+        .filter(Assignment.number == number)).one()
+
+print "---------------------------------------------"
+print unicode(assmt)
+print "---------------------------------------------"
+
+import os
+
+cwd = os.path.join(os.getcwd(), name)
+
+from subprocess import call
+
+for student in session.query(Student):
+    user_name = student.user_name
+    print user_name
+
+    state_changes = list(session.query(ASC)
+            .filter(ASC.assignment == assmt)
+            .filter(ASC.student == student)
+            .order_by(ASC.timestamp))
+
+    needs_grading = None
+    for sc in state_changes:
+        if sc.new_state == "retrieved":
+            needs_grading = True
+
+    for sc in state_changes:
+        if sc.new_state == "graded":
+            needs_grading = False
+
+    if not needs_grading:
+        continue
+
+    while True:
+        hw_dir = os.path.join(cwd, user_name)
+        report_file = os.path.join(hw_dir, "grade.txt")
+
+        if not os.path.exists(report_file):
+            with open(os.path.join(cwd, "template.txt"), "rb") as inf:
+                with open(report_file, "wb") as outf:
+                    outf.write(inf.read())
+
+        call(["gnome-terminal", "--working-directory="+hw_dir])
+        call(["vim", report_file])
+
+        import codecs
+        with codecs.open(report_file, "r", "utf-8") as inf:
+            report_lines = [l.rstrip() for l in inf.readlines()]
+
+        import re
+        total_re = re.compile("^TOTAL(.*)::.*$")
+        subtotal_re = re.compile("^SUBTOTAL(.*)::.*$")
+        points_re = re.compile("^.*::\s*([-0-9.]+)\s*$")
+
+        running_total = 0
+        running_subtotal = 0
+
+        for i, l in enumerate(report_lines):
+            m = total_re.match(l)
+            if m is not None:
+                report_lines[i] = "TOTAL%s:: %s" % (m.group(1), running_total)
+                continue
+
+            m = subtotal_re.match(l)
+            if m is not None:
+                report_lines[i] = "SUBTOTAL%s:: %s" % (m.group(1), running_subtotal)
+                running_subtotal = 0
+                continue
+
+            m = points_re.match(l)
+            if m is not None:
+                pts = float(m.group(1))
+                running_total += pts
+                running_subtotal += pts
+
+        report = u"\n".join(report_lines)
+
+        with codecs.open(report_file, "w", "utf-8") as outf:
+            outf.write(report)
+
+        print 75*"-"
+        print "Grade report for '%s'" % user_name
+        print 75*"-"
+        print report
+        print 75*"-"
+        print "Total: %s/%s points" % (running_total, assmt.possible_points)
+
+        answer = raw_input("accept [n]?")
+        if answer == "y":
+            session.add(ASC(
+                student=student, assignment=assmt,
+                new_state=u"graded", points=running_total,
+                report="<pre>%s</pre>" % report))
+            session.flush()
+            break

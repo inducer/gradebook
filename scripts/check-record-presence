@@ -1,0 +1,34 @@
+#! /usr/bin/env python
+#
+# {{{ boilerplate
+
+from camelot.core.orm import Session
+import os, sys
+sys.path.append(os.environ["GRADEBOOK_ROOT"])
+import main
+
+from camelot.core.conf import settings
+settings.setup_model()
+
+# }}}
+
+session = Session()
+
+import sys
+with open(sys.argv[1], "r") as inf:
+    for name in inf:
+        name = name.strip()
+        import re
+        m = re.match("^hpc12-hw([0-9]+)-([a-z0-9]+)$", name)
+        if not m:
+            print "NON-MATCH: %s" % name
+            continue
+
+        user_name = m.group(2)
+
+        from gradebook.model import Student
+        users = list(session.query(Student)
+                .filter(Student.user_name == user_name))
+
+        if len(users) != 1:
+            print "NOT FOUND: %s" % name
