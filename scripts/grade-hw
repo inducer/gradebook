@@ -1,5 +1,15 @@
 #! /usr/bin/env python
 #
+
+from optparse import OptionParser
+
+parser = OptionParser(usage="usage: %prog [options] COURSE_ID ASSIGNMENT_KIND ASSIGNMENT_NUMBER ASSIGNMENT_PREFIX")
+parser.add_option("-s", "--start-terminal",
+                  action="store_true", default=False,
+                  help="automatically start a terminal in the grading directory")
+
+(options, args) = parser.parse_args()
+
 # {{{ boilerplate
 
 from camelot.core.orm import Session
@@ -12,7 +22,12 @@ settings.setup_model()
 
 # }}}
 
-course_id, kind, number, name = sys.argv[1:]
+if len(args) < 4:
+    parser.print_usage()
+    import sys
+    sys.exit(1)
+
+course_id, kind, number, name = args
 
 session = Session()
 
@@ -64,8 +79,16 @@ for student in session.query(Student):
                 with open(report_file, "wb") as outf:
                     outf.write(inf.read())
 
-        call(["gnome-terminal", "--working-directory="+hw_dir])
-        call(["vim", report_file])
+	if options.start_terminal:
+	    call(["gnome-terminal", "--working-directory="+hw_dir])
+	
+	import os
+	if "EDITOR" in os.environ:
+            editor = os.environ["EDITOR"].split()
+        else:
+            editor = ["vim"]
+		
+        call(editor+[report_file])
 
         import codecs
         with codecs.open(report_file, "r", "utf-8") as inf:

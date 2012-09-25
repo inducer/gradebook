@@ -1,5 +1,15 @@
 #! /usr/bin/env python
 #
+
+from optparse import OptionParser
+
+parser = OptionParser(usage="usage: %prog [options] COURSE_ID ASSIGNMENT_KIND ASSIGNMENT_NUMBER ASSIGNMENT_PREFIX")
+parser.add_option("-r", "--record",
+                  action="store_true", default=False,
+                  help="determine state of homework and save to DB")
+
+(options, args) = parser.parse_args()
+
 # {{{ boilerplate
 
 from camelot.core.orm import Session
@@ -12,14 +22,6 @@ settings.setup_model()
 
 # }}}
 
-from optparse import OptionParser
-
-parser = OptionParser(usage="usage: %prog [options] COURSE_ID ASSIGNMENT_KIND ASSIGNMENT_NUMBER ASSIGNMENT_PREFIX")
-parser.add_option("-r", "--record",
-                  action="store_true", dest="verbose", default=False,
-                  help="determine state of homework and save to DB")
-
-(options, args) = parser.parse_args()
 
 if len(args) < 4:
     parser.print_usage()
