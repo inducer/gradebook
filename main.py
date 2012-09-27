@@ -14,7 +14,7 @@ class MySettings(SimpleSettings):
         import os
         from sqlalchemy import create_engine
         #return create_engine('sqlite:///'+os.environ["GRADEBOOK_DATABASE"])
-        return create_engine('mysql://%s@127.0.0.1/gradebook' % os.environ["GRADEBOOK_USER_PW"])
+        return create_engine('mysql://%s@127.0.0.1:3307/gradebook' % os.environ["GRADEBOOK_USER_PW"])
 
     def setup_model( self ):
         from camelot.core.sql import metadata
