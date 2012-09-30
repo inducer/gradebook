@@ -1,12 +1,11 @@
 #! /usr/bin/env python
-#
 
 from optparse import OptionParser
 
 parser = OptionParser(usage="usage: %prog [options] COURSE_ID ASSIGNMENT_KIND ASSIGNMENT_NUMBER ASSIGNMENT_PREFIX")
-parser.add_option("-s", "--start-terminal",
-                  action="store_true", default=True,
-                  help="automatically start a terminal in the grading directory")
+parser.add_option("-n", "--no-terminal",
+                  action="store_true",
+                  help="don't automatically start a terminal in the grading directory")
 
 (options, args) = parser.parse_args()
 
@@ -110,7 +109,7 @@ for student in session.query(Student):
                 with open(report_file, "wb") as outf:
                     outf.write(inf.read())
 
-        if options.start_terminal:
+        if not options.no_terminal:
             call(["x-terminal-emulator"], cwd=hw_dir)
 
         import os

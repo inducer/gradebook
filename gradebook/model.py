@@ -51,6 +51,7 @@ def assignment_state_change_choices(entity_instance):
     (('retrieved'),('Retrieved')),
     (('unavailable'),('Unavailable')),
     (('extension'),('Extension')),
+    (('report-sent'),('Report sent')),
     ]
 
 class School(Entity):
