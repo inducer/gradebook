@@ -45,6 +45,7 @@ def assignment_state_change_choices(entity_instance):
     return [
     ((None),('')),
     (('submitted'),('Submitted')),
+    (('grading-started'),('Grading started')),
     (('graded'),('Graded')),
     (('rejected'),('Rejected')),
     (('retrieved'),('Retrieved')),
@@ -221,6 +222,10 @@ class Assignment(Entity):
         return name
 
 
+def get_user():
+    import os
+    return os.environ["GRADEBOOK_USER_PW"].split(":")[0]
+
 class AssignmentStateChange(Entity):
     __tablename__ = 'assignment_state_change'
 
@@ -237,13 +242,14 @@ class AssignmentStateChange(Entity):
     timestamp = Column(DateTime, default=datetime.datetime.now)
     points = Column(Float)
     remark = Column(Unicode(1024))
+    user = Column(Unicode(1024), default=get_user)
 
     report = Column(RichText())
 
     class Admin(EntityAdmin):
         verbose_name_plural = "Assignment state changes"
 
-        list_display = ["student", "assignment", "new_state", "timestamp", "points"]
+        list_display = ["student", "assignment", "new_state", "user", "timestamp", "points"]
         form_display = list_display + [
                 "due_date", "remark", "report"]
 

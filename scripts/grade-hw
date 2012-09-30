@@ -5,10 +5,17 @@ from optparse import OptionParser
 
 parser = OptionParser(usage="usage: %prog [options] COURSE_ID ASSIGNMENT_KIND ASSIGNMENT_NUMBER ASSIGNMENT_PREFIX")
 parser.add_option("-s", "--start-terminal",
-                  action="store_true", default=False,
+                  action="store_true", default=True,
                   help="automatically start a terminal in the grading directory")
 
 (options, args) = parser.parse_args()
+
+if len(args) < 4:
+    parser.print_usage()
+    import sys
+    sys.exit(1)
+
+course_id, kind, number, name = args
 
 # {{{ boilerplate
 
@@ -20,14 +27,9 @@ import main
 from camelot.core.conf import settings
 settings.setup_model()
 
+from gradebook.model import get_user
+
 # }}}
-
-if len(args) < 4:
-    parser.print_usage()
-    import sys
-    sys.exit(1)
-
-course_id, kind, number, name = args
 
 session = Session()
 
@@ -51,7 +53,6 @@ from subprocess import call
 
 for student in session.query(Student):
     user_name = student.user_name
-    print user_name
 
     state_changes = list(session.query(ASC)
             .filter(ASC.assignment == assmt)
@@ -63,12 +64,42 @@ for student in session.query(Student):
         if sc.new_state == "retrieved":
             needs_grading = True
 
+    if not needs_grading:
+        print "%-10s: [-] not available as of %s" % (user_name, sc.timestamp)
+        continue
+
     for sc in state_changes:
         if sc.new_state == "graded":
+            print "%-10s: [X] graded (%s points) as of %s" % (
+                    user_name, sc.points, sc.timestamp)
             needs_grading = False
 
     if not needs_grading:
         continue
+
+    already_marked = False
+    for sc in state_changes:
+        if sc.new_state == "grading-started" and get_user() != sc.user:
+            print "%-10s: [?] %s has started grading this assignment at" % (
+                    user_name, sc.user, sc.timestamp)
+            needs_grading = False
+        if sc.new_state == "grading-started" and get_user() == sc.user:
+            already_marked = True
+            print "%-10s: [?] you started grading this assignment at %s" % (
+                    user_name, sc.timestamp)
+
+    if not needs_grading:
+        continue
+
+    if not already_marked:
+        print "%-10s: [O] marking as started" % user_name
+
+        session.add(ASC(
+            student=student, assignment=assmt,
+            new_state=u"grading-started"))
+        session.flush()
+
+    print "%-10s: grading..." % user_name
 
     while True:
         hw_dir = os.path.join(cwd, user_name)
@@ -80,7 +111,7 @@ for student in session.query(Student):
                     outf.write(inf.read())
 
         if options.start_terminal:
-            call(["gnome-terminal", "--working-directory="+hw_dir])
+            call(["x-terminal-emulator"], cwd=hw_dir)
 
         import os
         if "EDITOR" in os.environ:

@@ -10,6 +10,13 @@ parser.add_option("-r", "--record",
 
 (options, args) = parser.parse_args()
 
+if len(args) < 4:
+    parser.print_usage()
+    import sys
+    sys.exit(1)
+
+course_id, kind, number, name = args
+
 # {{{ boilerplate
 
 from camelot.core.orm import Session
@@ -22,13 +29,6 @@ settings.setup_model()
 
 # }}}
 
-
-if len(args) < 4:
-    parser.print_usage()
-    import sys
-    sys.exit(1)
-
-course_id, kind, number, name = args
 
 session = Session()
 
