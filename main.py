@@ -5,16 +5,31 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('main')
 
 # begin custom settings
+NO_CONF_ACK = [False]
 class MySettings(SimpleSettings):
-
-    # add an ENGINE or a CAMELOT_MEDIA_ROOT method here to connect
-    # to another database or change the location where files are stored
-
     def ENGINE( self ):
         import os
         from sqlalchemy import create_engine
-        #return create_engine('sqlite:///'+os.environ["GRADEBOOK_DATABASE"])
-        return create_engine('mysql://%s@127.0.0.1:3307/gradebook' % os.environ["GRADEBOOK_USER_PW"])
+        user_pw = os.environ.get("GRADEBOOK_USER_PW")
+        if user_pw is None:
+            db_file_name = os.environ.get("GRADEBOOK_DATABASE")
+            if db_file_name is None:
+                db_file_name = "gradebook-default.sqlite"
+                if not NO_CONF_ACK[0]:
+                    print "-"*75
+                    print "No configuration detected"
+                    print "-"*75
+                    print "Neither GRADEBOOK_USER_PW nor GRADEBOOK_DATABASE was found"
+                    print "as an environment variable. I'll run with a default"
+                    print "database of '%s'." % db_file_name
+                    print "-"*75
+                    print "Hint [Enter] if that sounds good, and Ctrl-C[Enter] if you'd like to stop."
+                    raw_input()
+                    NO_CONF_ACK[0] = True
+
+            return create_engine('sqlite:///'+db_file_name)
+        else:
+            return create_engine('mysql://%s@127.0.0.1:3307/gradebook' % user_pw)
 
     def setup_model( self ):
         from camelot.core.sql import metadata
