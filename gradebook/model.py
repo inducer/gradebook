@@ -225,7 +225,12 @@ class Assignment(Entity):
 
 def get_user():
     import os
-    return os.environ["GRADEBOOK_USER_PW"].split(":")[0]
+    user_pw = os.environ.get("GRADEBOOK_USER_PW")
+    if user_pw is not None:
+        return unicode(user_pw.split(":")[0])
+    else:
+        import getpass
+        return unicode(getpass.getuser())
 
 class AssignmentStateChange(Entity):
     __tablename__ = 'assignment_state_change'
