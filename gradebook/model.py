@@ -78,8 +78,13 @@ class Course(Entity):
 
     start_date = Column(Date, nullable=False)
 
+    instructor_signature = Column(Unicode(1024), nullable=False)
+    instructor_full_name = Column(Unicode(1024), nullable=False)
+
     class Admin(EntityAdmin):
         list_display = ["name", "start_date", "school"]
+        form_display = list_display + [
+                "instructor_signature", "instructor_full_name"]
 
         field_attributes = dict(
                 name=dict(minimal_column_width=50),

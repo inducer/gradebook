@@ -63,7 +63,7 @@ Your repository should have been called ${name}-${student.user_name}.
 Dont' worry, I won't keep spamming you--this is the only email of
 this kind you will receive.
 
-Andreas
+${assmt.course.instructor_signature}
 """, strict_undefined=True).render(
         assmt=assmt,
         student=student,
