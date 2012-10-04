@@ -61,21 +61,7 @@ def html_to_text(html):
     s.feed(html)
     return s.get_text()
 
-VT100_CODES = {
-        'black':        '0;30',         'bright gray':  '0;37',
-        'blue':         '0;34',         'white':                '1;37',
-        'green':        '0;32',         'bright blue':  '1;34',
-        'cyan':         '0;36',         'bright green': '1;32',
-        'red':          '0;31',         'bright cyan':  '1;36',
-        'purple':       '0;35',         'bright red':   '1;31',
-        'yellow':       '0;33',         'bright purple':'1;35',
-        'dark gray':'1;30',             'bright yellow':'1;33',
-        'normal':       '0',
-        'blink': '5',
-}
-
-def c(what):
-    return "\033[%sm" % VT100_CODES[what]
+from vt100 import c
 
 # }}}
 
@@ -146,10 +132,20 @@ for student in qry:
 
         if sc.new_state == "retrieved":
             retrieval_sc = sc
-        if sc.new_state == "graded":
+        elif sc.new_state == "graded":
             graded_sc = sc
-        if sc.new_state == "report-sent":
+        elif sc.new_state == "report-sent":
             report_sc = sc
+        elif sc.new_state == "do-over":
+            retrieval_sc = None
+            graded_sc = None
+            report_sc = None
+        elif sc.new_state in ["grading-started", "retrieved", "unavailable",
+                "extension"]:
+            pass
+        else:
+            raise RuntimeError("invalid assignment state '%s' for '%s'"
+                    % (sc.new_state, user_name))
 
     if graded_sc is None:
         if last_sc.new_state == "unavailable":

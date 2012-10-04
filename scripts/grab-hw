@@ -45,8 +45,13 @@ print unicode(assmt)
 print "---------------------------------------------"
 
 from datetime import date
-
 today = date.today()
+
+from vt100 import c
+
+def print_state(s):
+    print "%s%-10s: %s%s" % (c("purple"), user_name, s, c("normal"))
+
 
 import os
 
@@ -56,62 +61,108 @@ except OSError:
     pass
 
 cwd = os.path.join(os.getcwd(), name)
-print cwd
 
-from subprocess import call
+from subprocess import call, check_output, check_call, PIPE
 
-for student in session.query(Student):
+for student in session.query(Student).order_by(Student.user_name):
     user_name = student.user_name
-    print user_name
 
     state_changes = list(session.query(ASC)
             .filter(ASC.assignment == assmt)
             .filter(ASC.student == student)
             .order_by(ASC.timestamp))
 
-    do_grab = True
+    extension_sc = None
+    retrieval_sc = None
+    unavailable_sc = None
+    graded_sc = None
+
     for sc in state_changes:
-        if sc.new_state == "extension" and sc.due_date >= today:
-            print "  *** not due yet"
-            do_grab = False
+        if sc.new_state == "retrieved":
+            retrieval_sc = sc
+        elif sc.new_state == "graded":
+            graded_sc = sc
+        elif sc.new_state == "extension" and sc.due_date >= today:
+            extension_sc = sc
+        elif sc.new_state == "unavailable":
+            unavailable_sc = sc
+        elif sc.new_state == "do-over":
+            print_state("do-over granted by %s at %s" % (sc.user, sc.timestamp))
 
-    if options.record:
-        for sc in state_changes:
-            if sc.new_state == "unavailable":
-                print "  *** previously unavailable: %s" % sc.timestamp
-                do_grab = False
+            # don't reset extension_sc
+            retrieval_sc = None
+            graded_sc = None
+            report_sc = None
+        elif sc.new_state in ["extension", "grading-started", "report-sent"]:
+            pass
+        else:
+            raise RuntimeError("invalid assignment state '%s' for '%s'"
+                    % (sc.new_state, user_name))
 
-            if sc.new_state == "retrieved":
-                print "  *** previously retrieved: %s" % sc.timestamp
-                do_grab = False
+    grab_rev = None
 
-    else:
-        if not do_grab:
-            continue
-
-        do_grab = False
-
-        for sc in state_changes:
-            if sc.new_state == "retrieved":
-                print "  *** recorded as available: %s" % sc.timestamp
-                do_grab = True
-
-    if not do_grab:
+    if extension_sc is not None:
+        print_state("extension granted by %s at %s until %s" % (
+                extension_sc.user, extension_sc.timestamp,
+                extension_sc.due_date))
+        continue
+    if unavailable_sc is not None:
+        print_state("recorded as unavailable by %s at %s" % (
+                unavailable_sc.user, unavailable_sc.timestamp))
         continue
 
-    retcode = call(["git", "clone", "forge:%s-%s"
-        % (name, user_name), user_name], cwd=cwd)
+    if retrieval_sc is not None:
+        print_state("retrieved by %s at %s (rev '%s'), grabbing/updating..." % (
+                 retrieval_sc.user, retrieval_sc.timestamp,
+                retrieval_sc.remark))
+        grab_rev = retrieval_sc.remark
+
+    else:
+        if not options.record:
+            # if not in recording mode, don't try to retrieve stuff
+            # that hasn't been retrieved before.
+            print_state("no availability decision, skipping")
+            continue
+        else:
+            print_state("grabbing...")
+
+    if graded_sc is not None:
+        print_state("graded by %s at %s" % (
+                graded_sc.user, graded_sc.timestamp))
+
+    repo_dir = os.path.join(cwd, user_name)
+    if os.path.exists(repo_dir):
+        clone_retcode = 0
+    else:
+        clone_retcode = call(["git", "clone", "forge:%s-%s"
+            % (name, user_name), user_name], cwd=cwd)
+
+    if grab_rev is not None:
+        co_retcode = call(["git", "checkout", grab_rev], cwd=repo_dir,
+                stderr=PIPE)
+        if co_retcode:
+            check_call(["git", "pull", "origin", "master"], cwd=repo_dir)
+            co_retcode = call(["git", "checkout", grab_rev], cwd=repo_dir,
+                    stderr=PIPE)
+            if co_retcode:
+                raise RuntimeError("could not check out target rev in '%s'" % user_name)
+
+    if clone_retcode == 0:
+        grabbed_rev = check_output(["git", "rev-parse", "HEAD"], cwd=repo_dir).strip()
+        if grab_rev is not None:
+            assert grab_rev == grabbed_rev
 
     if options.record:
-        if retcode == 0:
-            print "  *** success"
-            session.add(ASC(
-                student=student, assignment=assmt,
-                new_state="retrieved"))
-            session.flush()
+        if clone_retcode == 0:
+            print "%s  *** retrieved%s" % (c("green"), c("normal"))
+            if retrieval_sc is None:
+                session.add(ASC(
+                    student=student, assignment=assmt,
+                    new_state="retrieved", remark=grabbed_rev))
+                session.flush()
 
         else:
-            print "  *** error"
+            print "%s  *** looks unavailable%s" % (c("bright red"), c("normal"))
             session.add(ASC(
                 student=student, assignment=assmt,
                 new_state="unavailable"))

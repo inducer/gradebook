@@ -1,5 +1,10 @@
 #! /usr/bin/env python
 
+from datetime import date
+from vt100 import c
+import os
+from subprocess import call, check_output
+
 from optparse import OptionParser
 
 parser = OptionParser(usage="usage: %prog [options] COURSE_ID ASSIGNMENT_KIND ASSIGNMENT_NUMBER ASSIGNMENT_PREFIX")
@@ -16,7 +21,7 @@ if len(args) < 4:
 
 course_id, kind, number, name = args
 
-# {{{ boilerplate
+# {{{ camelot init
 
 from camelot.core.orm import Session
 import os, sys
@@ -44,13 +49,15 @@ print "---------------------------------------------"
 print unicode(assmt)
 print "---------------------------------------------"
 
-import os
+today = date.today()
+
+def print_state(s):
+    print "%s%-10s: %s%s" % (c("purple"), user_name, s, c("normal"))
+
 
 cwd = os.path.join(os.getcwd(), name)
 
-from subprocess import call
-
-for student in session.query(Student):
+for student in session.query(Student).order_by(Student.user_name):
     user_name = student.user_name
 
     state_changes = list(session.query(ASC)
@@ -58,50 +65,83 @@ for student in session.query(Student):
             .filter(ASC.student == student)
             .order_by(ASC.timestamp))
 
+    extension_sc = None
+    retrieval_sc = None
+    unavailable_sc = None
+    graded_sc = None
+    grading_started_sc = None
+
     needs_grading = None
     for sc in state_changes:
-        if sc.new_state == "retrieved":
-            needs_grading = True
+        if sc.new_state == "extension" and sc.due_date >= today:
+            extension_sc = sc
+        elif sc.new_state == "retrieved":
+            retrieval_sc = sc
+        elif sc.new_state == "graded":
+            graded_sc = sc
+        elif sc.new_state == "unavailable":
+            unavailable_sc = sc
+        elif sc.new_state == "grading-started":
+            grading_started_sc = sc
+        elif sc.new_state == "do-over":
+            print_state("do-over granted by %s at %s" % (sc.user, sc.timestamp))
 
-    if not needs_grading:
-        print "%-10s: [-] not available as of %s" % (user_name, sc.timestamp)
+            # don't reset extension_sc
+            retrieval_sc = None
+            unavailable_sc = None
+            graded_sc = None
+            grading_started_sc = None
+        elif sc.new_state in ["extension", "report-sent"]:
+            pass
+        else:
+            raise RuntimeError("invalid assignment state '%s' for '%s'"
+                    % (sc.new_state, user_name))
+
+    if extension_sc is not None:
+        print_state("extension granted by %s at %s until %s" % (
+                extension_sc.user, extension_sc.timestamp,
+                extension_sc.due_date))
+        continue
+    if unavailable_sc is not None:
+        print_state("recorded as unavailable by %s at %s" % (
+                unavailable_sc.user, unavailable_sc.timestamp))
+        continue
+    if graded_sc is not None:
+        print_state("graded (%s points) by %s at %s" % (
+                graded_sc.points, graded_sc.user, graded_sc.timestamp))
         continue
 
-    for sc in state_changes:
-        if sc.new_state == "graded":
-            print "%-10s: [X] graded (%s points) as of %s" % (
-                    user_name, sc.points, sc.timestamp)
-            needs_grading = False
+    if retrieval_sc is None:
+        raise RuntimeError("no retrieval decision for '%s'" % user_name)
 
-    if not needs_grading:
-        continue
-
-    already_marked = False
-    for sc in state_changes:
-        if sc.new_state == "grading-started" and get_user() != sc.user:
-            print "%-10s: [?] %s has started grading this assignment at" % (
-                    user_name, sc.user, sc.timestamp)
-            needs_grading = False
-        if sc.new_state == "grading-started" and get_user() == sc.user:
-            already_marked = True
-            print "%-10s: [?] you started grading this assignment at %s" % (
-                    user_name, sc.timestamp)
-
-    if not needs_grading:
-        continue
-
-    if not already_marked:
-        print "%-10s: [O] marking as started" % user_name
-
+    if grading_started_sc is not None:
+        print_state("grading started by %s at %s" % (
+                grading_started_sc.user, grading_started_sc.timestamp))
+        if get_user() != sc.user:
+            print "%s  *** that's not us, skipping%s" % (c("bright red"), c("normal"))
+            continue
+    else:
+        print_state("marking as started")
         session.add(ASC(
             student=student, assignment=assmt,
             new_state=u"grading-started"))
         session.flush()
 
-    print "%-10s: grading..." % user_name
+    print_state("grading...")
 
     while True:
         hw_dir = os.path.join(cwd, user_name)
+
+        if not os.path.exists(hw_dir):
+            raise RuntimeError("directory '%s' does not exist--run grab-hw"
+                    % hw_dir)
+
+        grabbed_rev = check_output(["git", "rev-parse", "HEAD"], cwd=hw_dir).strip()
+        if retrieval_sc.remark is not None and grabbed_rev != retrieval_sc.remark:
+            raise RuntimeError("repo rev (%s) does not match "
+                    "expected rev (%s)--run grab-hw" % (
+                        grabbed_rev, retrieval_sc.remark))
+
         report_file = os.path.join(hw_dir, "grade.txt")
 
         if not os.path.exists(report_file):

@@ -44,14 +44,13 @@ def process_state_choices(entity_instance):
 def assignment_state_change_choices(entity_instance):
     return [
     ((None),('')),
-    (('submitted'),('Submitted')),
     (('grading-started'),('Grading started')),
     (('graded'),('Graded')),
-    (('rejected'),('Rejected')),
-    (('retrieved'),('Retrieved')),
+    (('retrieved'),('Retrieved')), # requires git commit id as remark
     (('unavailable'),('Unavailable')),
     (('extension'),('Extension')),
     (('report-sent'),('Report sent')),
+    (('do-over'),('Do-over')), # resets state to empty
     ]
 
 class School(Entity):
