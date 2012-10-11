@@ -1,8 +1,11 @@
 #! /usr/bin/env python
+from datetime import date
+
 from optparse import OptionParser
 
 parser = OptionParser(usage="usage: %prog [options] COURSE_ID ASSIGNMENT_KIND ASSIGNMENT_NUMBER ASSIGNMENT_PREFIX")
 parser.add_option("-s", "--send", action="store_true")
+parser.add_option("--ignore-sent", action="store_true")
 parser.add_option("-p", "--preview", action="store_true")
 parser.add_option("--student")
 
@@ -92,6 +95,10 @@ We've retrieved your work from the repository called
 ${name}-${student.user_name} on the class collaboration space 
 on ${retrieval_sc.timestamp}.
 
+%if retrieval_sc.remark is not None:
+For reference, we've graded revision ${retrieval_sc.remark}.
+
+%endif
 You received ${"%.1f" % graded_sc.points} out of ${"%.1f" % assmt.possible_points} possible points (${"%.0f" % (100*graded_sc.points/assmt.possible_points)} %).
 
 A report with specific comments and a breakdown of points awarded
@@ -105,6 +112,8 @@ Detailed report:
 ===============================================================
 ${report}
 """
+
+today = date.today()
 
 qry = session.query(Student)
 
@@ -157,8 +166,16 @@ for student in qry:
             symbol = "?"
             col = c("bright purple")+c("blink")
 
+        state = last_sc.new_state
+
+        if state == "extension":
+            if sc.due_date < today:
+                state = "EXPIRED extension (due %s)" % sc.due_date
+            else:
+                state = "active extension (due %s)" % sc.due_date
+
         print "%-10s: %s[%s] %s at %s by %s%s" % (
-                user_name, col, symbol, last_sc.new_state,
+                user_name, col, symbol, state,
                 last_sc.timestamp, last_sc.user, c("normal"))
         continue
 
@@ -172,7 +189,7 @@ for student in qry:
             graded_sc.user, graded_sc.timestamp, report_blurb)
     graded_count += 1
 
-    if report_sc is not None:
+    if not options.ignore_sent and report_sc is not None:
         continue
 
     report = html_to_text(graded_sc.report)
