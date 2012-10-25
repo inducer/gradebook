@@ -14,6 +14,7 @@ def student_kind_choices(entity_instance):
     ((None),('')),
     (('credit'),('Credit')),
     (('audit'),('Audit')),
+    (('dropped'),('Dropped')),
     ]
 def assignment_choices(entity_instance):
     return [
@@ -124,7 +125,7 @@ class Student(Entity):
     notes = Column(RichText())
 
     class Admin(EntityAdmin):
-        list_display = ["last_name", "first_name", "identifier", "user_name", "course"]
+        list_display = ["last_name", "first_name", "kind", "identifier", "user_name", "course"]
         field_attributes = dict(
                 kind=dict(choices=student_kind_choices),
                 contacts=dict(create_inline=True),
