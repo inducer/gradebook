@@ -52,6 +52,7 @@ def assignment_state_change_choices(entity_instance):
     (('extension'),('Extension')),
     (('report-sent'),('Report sent')),
     (('do-over'),('Do-over')), # resets state to empty
+    (('exempt'),('Exempt')),
     ]
 
 class School(Entity):
