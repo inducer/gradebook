@@ -3,7 +3,8 @@
 
 from optparse import OptionParser
 
-parser = OptionParser(usage="usage: %prog [options] COURSE_ID ASSIGNMENT_KIND ASSIGNMENT_NUMBER ASSIGNMENT_PREFIX")
+parser = OptionParser(usage="usage: %prog [options] "
+    "COURSE_ID ASSIGNMENT_KIND ASSIGNMENT_NUMBER ASSIGNMENT_PREFIX")
 parser.add_option("-r", "--record",
                   action="store_true", default=False,
                   help="determine state of homework and save to DB")
@@ -21,9 +22,10 @@ course_id, kind, number, name = args
 # {{{ boilerplate
 
 from camelot.core.orm import Session
-import os, sys
+import os
+import sys
 sys.path.append(os.environ["GRADEBOOK_ROOT"])
-import main
+import main  # noqa
 
 from camelot.core.conf import settings
 settings.setup_model()
@@ -49,6 +51,7 @@ from datetime import date
 today = date.today()
 
 from vt100 import c
+
 
 def print_state(s):
     print "%s%-10s: %s%s" % (c("purple"), user_name, s, c("normal"))
@@ -91,7 +94,7 @@ for student in qry:
         elif sc.new_state == "graded":
             graded_sc = sc
         elif sc.new_state == "extension":
-            if  sc.due_date >= today:
+            if sc.due_date >= today:
                 extension_sc = sc
             else:
                 # undo previous extension--shortens a deadline if done early
@@ -126,8 +129,8 @@ for student in qry:
 
     if retrieval_sc is not None:
         print_state("retrieved by %s at %s (rev '%s'), grabbing/updating..." % (
-                 retrieval_sc.user, retrieval_sc.timestamp,
-                retrieval_sc.remark))
+            retrieval_sc.user, retrieval_sc.timestamp,
+            retrieval_sc.remark))
         grab_rev = retrieval_sc.remark
 
     else:
@@ -147,8 +150,8 @@ for student in qry:
     if os.path.exists(repo_dir):
         clone_retcode = 0
     else:
-        clone_retcode = call(["git", "clone", "forge:%s-%s"
-            % (name, user_name), user_name], cwd=cwd)
+        clone_retcode = call(["git", "clone", "gitlab:%s/%s"
+            % (user_name, name), user_name], cwd=cwd)
 
     if clone_retcode == 0:
         if grab_rev is not None:
@@ -159,12 +162,14 @@ for student in qry:
                 co_retcode = call(["git", "checkout", grab_rev], cwd=repo_dir,
                         stderr=PIPE)
                 if co_retcode:
-                    raise RuntimeError("could not check out target rev in '%s'" % user_name)
+                    raise RuntimeError(
+                            "could not check out target rev in '%s'" % user_name)
         else:
             check_call(["git", "pull", "origin", "master"], cwd=repo_dir)
 
     if clone_retcode == 0:
-        grabbed_rev = check_output(["git", "rev-parse", "HEAD"], cwd=repo_dir).strip()
+        grabbed_rev = check_output(
+                ["git", "rev-parse", "HEAD"], cwd=repo_dir).strip()
         if grab_rev is not None:
             assert grab_rev == grabbed_rev
 
@@ -183,4 +188,3 @@ for student in qry:
                 student=student, assignment=assmt,
                 new_state="unavailable"))
             session.flush()
-

@@ -1,9 +1,10 @@
 # {{{ boilerplate
 
 from camelot.core.orm import Session
-import os, sys
+import os
+import sys
 sys.path.append(os.environ["GRADEBOOK_ROOT"])
-import main
+import main  # noqa
 
 from camelot.core.conf import settings
 settings.setup_model()
@@ -13,22 +14,16 @@ settings.setup_model()
 session = Session()
 
 from gradebook.model import (Course,
-        Student, Process, ProcessStateChange,
-        StudentContactInfo)
+        Student, StudentContactInfo)
 course, = session.query(Course).all()
-
-ml_process, = (session.query(Process)
-        .filter(Process.course == course)
-        .filter(Process.name.like("Mail%")))
-hpc_process, = (session.query(Process)
-        .filter(Process.course == course)
-        .filter(Process.name.like("HPC%")))
 
 import csv
 with open('class-list.csv', 'rb') as csvfile:
-    reader = csv.DictReader(csvfile)
+    reader = csv.DictReader(csvfile, delimiter=";")
     for row in reader:
-        ln, fn = row["Name"].split(",")
+        print row
+        ln = row["Last"]
+        fn = row["First"]
         student = Student(first_name=unicode(fn.strip()),
                 last_name=unicode(ln.strip()),
                 user_name=unicode(row["NetID"]),
@@ -38,27 +33,7 @@ with open('class-list.csv', 'rb') as csvfile:
         session.add(StudentContactInfo(
             student=student,
             kind="email",
-            value=row["Email"],
-            ))
-
-        if row["Email2"]:
-            session.add(StudentContactInfo(
-                student=student,
-                kind="email",
-                value=row["Email2"],
-                ))
-
-        if row["HPC"]:
-            session.add(ProcessStateChange(
-                student=student,
-                process=hpc_process,
-                new_state=unicode("started"),
-                ))
-
-        session.add(ProcessStateChange(
-            student=student,
-            process=ml_process,
-            new_state=unicode("completed"),
+            value=row["NetID"]+"@illinois.edu",
             ))
 
         print unicode(student)
@@ -68,4 +43,3 @@ with open('class-list.csv', 'rb') as csvfile:
     #print name
 
 session.flush()
-

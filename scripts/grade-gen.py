@@ -10,6 +10,7 @@ parser.add_option("-c", "--credit-only",
                   action="store_true")
 parser.add_option("-d", "--print-detail",
                   action="store_true")
+parser.add_option("--student")
 
 (options, args) = parser.parse_args()
 
@@ -58,6 +59,8 @@ qry = session.query(Student)
 
 if options.credit_only is not None:
     qry = qry.filter(Student.kind == "credit")
+if options.student is not None:
+    qry = qry.filter(Student.user_name == options.student)
 
 qry = qry.order_by(Student.last_name)
 
@@ -169,17 +172,22 @@ for student in qry:
     issues = []
     if pres_grade is None:
         issues.append("no presentation")
+        pres_grade = 0
     if report_grade is None:
         issues.append("no report")
+        report_grade = 0
     if any(hw is None for hw in hws):
         issues.append("not all hw done")
+        for i in range(len(hws)):
+            if hws[i] is None:
+                hws[i] = 0
 
     if issues:
         print "%-10s %-40s: /!\ %s" % (
                 student.user_name,
                 "%s, %s" % (student.last_name, student.first_name),
                 ", ".join(issues))
-        continue
+        #continue
 
     del issues
 

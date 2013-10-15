@@ -89,14 +89,18 @@ not_done_count = 0
 MAIL_TEMPLATE = u"""
 Dear ${student.first_name} ${student.last_name},
 
-This is an automated email about ${assmt.kind} ${assmt.number} of the ${assmt.course} class at ${assmt.course.school}.
+This is an automated email about ${assmt.kind} ${assmt.number}
+of the ${assmt.course} class
+at the ${assmt.course.school}.
 
-We've retrieved your work from the repository called
-${name}-${student.user_name} on the class collaboration space 
-on ${retrieval_sc.timestamp}.
+I've retrieved your work from the repository at
+
+    http://gitlab.tiker.net/${student.user_name}/${name}
+
+on the class collaboration space on ${retrieval_sc.timestamp}.
 
 %if retrieval_sc.remark is not None:
-For reference, we've graded revision ${retrieval_sc.remark}.
+For reference, the graded revision was ${retrieval_sc.remark}.
 
 %endif
 You received ${"%.1f" % graded_sc.points} out of ${"%.1f" % assmt.possible_points} possible points (${"%.0f" % (100*graded_sc.points/assmt.possible_points)} %).
